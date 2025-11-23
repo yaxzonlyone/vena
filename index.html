@@ -1,0 +1,519 @@
+<!doctype html>
+
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>progress tracker</title>
+  <style>
+    :root{
+      --bg:#fafafa;
+      --blue:#007bff;
+      --muted:#888;
+      --card:#fff;
+      --radius:8px;
+      --text:#333;
+      --shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:16px;
+    }
+    .wrap{
+      width:100%;
+      max-width:600px;
+      background:var(--bg);
+      padding:16px;
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+    }.header{
+  margin-bottom:16px;
+  text-align:center;
+}
+.title{
+  font-size:24px;
+  font-weight:900;
+  line-height:1.2;
+  user-select:none;
+  margin-bottom:8px;
+}
+.title-input{
+  font-size:24px;
+  font-weight:900;
+  padding:8px 12px;
+  border-radius:var(--radius);
+  border:1px solid #ddd;
+  outline:none;
+  text-align:center;
+}
+.subtitle{
+  color:var(--muted);
+  font-size:14px;
+  margin-bottom:8px;
+}
+.edit-line{
+  margin-top:8px;
+  font-size:14px;
+  color:var(--blue);
+  cursor:pointer;
+  display:inline-block;
+  user-select:none;
+}
+
+.controls {
+  margin-top:12px;
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  align-items:center;
+}
+button.btn{
+  border:0;
+  padding:8px 16px;
+  border-radius:var(--radius);
+  font-size:14px;
+  cursor:pointer;
+  transition:background 0.2s;
+}
+button.btn.blue{background:var(--blue);color:#fff}
+button.btn.blue:hover{background:#0056b3}
+button.btn.ghost{background:#fff;border:1px solid #ddd;color:#333}
+button.btn.ghost:hover{background:#f8f9fa}
+
+.bar-outer{
+  width:100%;
+  height:12px;
+  background:#eee;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:12px;
+}
+.bar-inner{
+  height:100%;
+  width:0%;
+  background:var(--blue);
+  transition:width 0.3s ease;
+}
+.percent{
+  margin-top:8px;
+  text-align:center;
+  font-size:14px;
+  color:var(--muted);
+}
+
+/* add-area modified: button moved under input */
+.add-area{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-top:20px;
+  align-items:stretch;
+}
+.input{
+  width:100%;
+  padding:12px;
+  border-radius:var(--radius);
+  border:1px solid #ddd;
+  font-size:16px;
+  outline:none;
+}
+#addBtn{
+  width:100%;
+}
+
+.list-container{
+  margin-top:20px;
+  max-height:300px;
+  overflow-y:auto;
+}
+.list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.item{
+  display:flex;
+  align-items:center;
+  padding:12px;
+  border-radius:var(--radius);
+  background:var(--card);
+  border:1px solid #eee;
+  gap:8px;
+  cursor:pointer;
+  transition:background 0.2s, transform 0.1s;
+  box-shadow:var(--shadow);
+}
+.item:hover{transform:scale(1.02)}
+.item .name{
+  flex:1;
+  font-size:16px;
+  font-weight:600;
+  text-align:center;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.item.dim{
+  background:#f0f0f0;
+  color:#999;
+  opacity:0.8;
+}
+
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.5);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:60;
+  opacity:0;
+  visibility:hidden;
+  transition:opacity 0.3s, visibility 0.3s;
+}
+.modal-backdrop.show{
+  opacity:1;
+  visibility:visible;
+}
+.modal{
+  width:min(400px,90%);
+  background:#fff;
+  border-radius:var(--radius);
+  padding:20px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.2);
+  text-align:center;
+  transform:scale(0.9);
+  transition:transform 0.3s;
+}
+.modal-backdrop.show .modal{
+  transform:scale(1);
+}
+.modal h3{margin:0 0 12px 0;font-size:18px;font-weight:700}
+.modal p{margin:0 0 16px 0;color:var(--muted)}
+.modal .actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.modal button{flex:1;min-width:100px;padding:10px;border-radius:var(--radius);font-size:14px}
+
+@media (max-width:640px){
+  body{padding:12px}
+  .wrap{padding:12px}
+  .title{font-size:20px}
+  .title-input{font-size:20px}
+  .input{font-size:15px;padding:10px}
+  .item .name{font-size:14px}
+  .bar-outer{height:10px}
+  .list-container{max-height:250px}
+}
+
+.input:focus, .title-input:focus, button:focus{box-shadow:0 0 0 3px rgba(0,123,255,0.25);outline:none}
+
+  </style>
+</head>
+<body>
+  <div class="wrap" role="application" aria-label="progress tracker">
+    <div class="header">
+      <div id="titleContainer">
+        <div id="titleDisplay" class="title">My Progress</div>
+        <div class="subtitle" id="counterSmall">(0/0)</div>
+        <div id="editLine" class="edit-line" tabindex="0" role="button" aria-label="edit judul">edit</div>
+      </div>
+      <div class="bar-outer" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div id="barInner" class="bar-inner"></div>
+      </div>
+      <div class="percent" id="percentLabel">0%</div>
+      <div class="controls" aria-hidden="false">
+        <button id="resetBtn" class="btn ghost">reset</button>
+      </div><!-- modified add-area -->
+  <div class="add-area" aria-label="tambah kegiatan">
+    <input id="newItem" class="input" placeholder=" " aria-label="nama kegiatan" />
+  </div>
+  <div class="controls" aria-hidden="false" style="margin-top:12px; display:flex; justify-content:center;">
+    <button id="addBtn" class="btn blue">add</button>
+  </div>
+</div>
+
+<div class="list-container">
+  <div class="list" id="listWrap" aria-live="polite" aria-atomic="true" style="min-height:60px"></div>
+</div>
+
+  </div>  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <h3 id="modalTitle">Aksi item</h3>
+      <p id="modalSubtitle"></p>
+      <div class="actions" id="modalActions"></div>
+    </div>
+  </div>  <script>
+    const KEY_TITLE = 'pt_title';
+    const KEY_ITEMS = 'pt_items';
+    const KEY_TOTAL = 'pt_totalAdded';
+    const KEY_DONE = 'pt_completedCount';
+
+    const titleDisplay = document.getElementById('titleDisplay');
+    const editLine = document.getElementById('editLine');
+    const resetBtn = document.getElementById('resetBtn');
+    const barInner = document.getElementById('barInner');
+    const percentLabel = document.getElementById('percentLabel');
+    const counterSmall = document.getElementById('counterSmall');
+
+    const newItemInput = document.getElementById('newItem');
+    const addBtn = document.getElementById('addBtn');
+    const listWrap = document.getElementById('listWrap');
+
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalSubtitle = document.getElementById('modalSubtitle');
+    const modalActions = document.getElementById('modalActions');
+
+    let title = localStorage.getItem(KEY_TITLE) || 'My Progress';
+    let items = [];
+    try { items = JSON.parse(localStorage.getItem(KEY_ITEMS)) || []; } catch(e){ items = []; }
+    let totalAdded = Number(localStorage.getItem(KEY_TOTAL) || 0);
+    let completedCount = Number(localStorage.getItem(KEY_DONE) || 0);
+
+    function saveAll(){
+      localStorage.setItem(KEY_TITLE, title);
+      localStorage.setItem(KEY_ITEMS, JSON.stringify(items));
+      localStorage.setItem(KEY_TOTAL, String(totalAdded));
+      localStorage.setItem(KEY_DONE, String(completedCount));
+    }
+
+    function renderTitle(){
+      titleDisplay.textContent = title;
+      counterSmall.textContent = `(${completedCount}/${totalAdded})`;
+    }
+
+    function calcPercent(){
+      if (totalAdded === 0) return 0;
+      return Math.round((completedCount / totalAdded) * 100);
+    }
+
+    function renderProgress(){
+      const p = calcPercent();
+      barInner.style.width = p + '%';
+      percentLabel.textContent = p + '%';
+      const outer = barInner.parentElement;
+      outer.setAttribute('aria-valuenow', String(p));
+    }
+
+    function renderList(){
+      listWrap.innerHTML = '';
+      if (!items || items.length === 0){
+        return;
+      }
+      items.forEach(it => {
+        const row = document.createElement('div');
+        row.className = 'item' + (it.done ? ' dim' : '');
+        row.setAttribute('data-id', it.id);
+        row.tabIndex = 0;
+        row.setAttribute('role','button');
+        row.setAttribute('aria-pressed', String(!!it.done));
+
+        const name = document.createElement('div');
+        name.className = 'name';
+        name.textContent = it.name;
+        name.title = it.name;
+
+        row.appendChild(name);
+
+        row.addEventListener('click', () => {
+          openItemModal(it.id);
+        });
+        row.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openItemModal(it.id);
+          }
+        });
+
+        listWrap.appendChild(row);
+      });
+    }
+
+    function addItem(){
+      const raw = newItemInput.value.trim();
+      if (!raw) return;
+      const id = Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+      items.push({ id, name: raw, done: false });
+      totalAdded += 1;
+      newItemInput.value = '';
+      saveAll();
+      renderAll();
+      newItemInput.focus();
+    }
+
+    function markFinish(id){
+      const it = items.find(i => i.id === id);
+      if (!it) return;
+      if (!it.done) {
+        it.done = true;
+        completedCount += 1;
+        saveAll();
+        renderAll();
+      }
+      closeModal();
+    }
+
+    function undoFinish(id){
+      const it = items.find(i => i.id === id);
+      if (!it) return;
+      if (it.done) {
+        it.done = false;
+        completedCount = Math.max(0, completedCount - 1);
+        saveAll();
+        renderAll();
+      }
+      closeModal();
+    }
+
+    function removeItem(id){
+      const idx = items.findIndex(i => i.id === id);
+      if (idx === -1) return;
+      const [removed] = items.splice(idx,1);
+      if (removed.done){
+        completedCount = Math.max(0, completedCount - 1);
+      }
+      saveAll();
+      renderAll();
+      closeModal();
+    }
+
+    let activeItemId = null;
+    function openItemModal(id){
+      activeItemId = id;
+      const it = items.find(i => i.id === id);
+      if (!it) return;
+      modalTitle.textContent = it.name;
+      modalSubtitle.textContent = ' ';
+      modalActions.innerHTML = '';
+
+      if (!it.done){
+        const finishBtn = document.createElement('button');
+        finishBtn.className = 'btn blue';
+        finishBtn.textContent = 'Finish';
+        finishBtn.addEventListener('click', ()=> markFinish(id));
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn ghost';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', ()=> removeItem(id));
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', closeModal);
+
+        modalActions.appendChild(finishBtn);
+        modalActions.appendChild(removeBtn);
+        modalActions.appendChild(cancelBtn);
+      } else {
+        const undoBtn = document.createElement('button');
+        undoBtn.className = 'btn blue';
+        undoBtn.textContent = 'Undo';
+        undoBtn.addEventListener('click', ()=> undoFinish(id));
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn ghost';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', ()=> removeItem(id));
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.addEventListener('click', closeModal);
+
+        modalActions.appendChild(undoBtn);
+        modalActions.appendChild(removeBtn);
+        modalActions.appendChild(cancelBtn);
+      }
+
+      modalBackdrop.classList.add('show');
+      modalBackdrop.setAttribute('aria-hidden','false');
+
+      const firstBtn = modalActions.querySelector('button');
+      if (firstBtn) firstBtn.focus();
+    }
+
+    function closeModal(){
+      modalBackdrop.classList.remove('show');
+      modalBackdrop.setAttribute('aria-hidden','true');
+      activeItemId = null;
+    }
+
+    function resetAll(){
+      const ok = confirm('reset semua progres dan daftar?');
+      if (!ok) return;
+      items = [];
+      totalAdded = 0;
+      completedCount = 0;
+      title = 'My Progress';
+      saveAll();
+      renderAll();
+    }
+
+    function enableTitleEdit(){
+      const input = document.createElement('input');
+      input.className = 'title-input';
+      input.value = title;
+      input.setAttribute('aria-label','edit judul progress');
+      const container = document.getElementById('titleContainer');
+      titleDisplay.replaceWith(input);
+      input.focus();
+      input.select();
+
+      function finishEdit(){
+        const v = input.value.trim() || 'My Progress';
+        title = v;
+        saveAll();
+        input.replaceWith(titleDisplay);
+        renderTitle();
+      }
+
+      input.addEventListener('blur', finishEdit);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') input.blur();
+        if (e.key === 'Escape') { input.value = title; input.blur(); }
+      });
+    }
+
+    function renderAll(){
+      renderTitle();
+      renderProgress();
+      renderList();
+    }
+
+    addBtn.addEventListener('click', addItem);
+    newItemInput.addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+    editLine.addEventListener('click', enableTitleEdit);
+    editLine.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') enableTitleEdit(); });
+
+    resetBtn.addEventListener('click', resetAll);
+
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeModal();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    function initFromStorage(){
+      title = localStorage.getItem(KEY_TITLE) || 'My Progress';
+      try { items = JSON.parse(localStorage.getItem(KEY_ITEMS)) || []; } catch(e){ items = []; }
+      totalAdded = Number(localStorage.getItem(KEY_TOTAL) || 0);
+      completedCount = Number(localStorage.getItem(KEY_DONE) || 0);
+      renderAll();
+    }
+
+    initFromStorage();
+
+    window.addEventListener('storage', () => {
+      initFromStorage();
+    });
+  </script></body>
+</html>
